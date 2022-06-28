@@ -432,11 +432,8 @@ public class HashedWheelTimer implements Timer {
         @Override
         public void run() {
             // Initialize the startTime.
-            startTime = System.nanoTime();
-            if (startTime == 0) {
-                // We use 0 as an indicator for the uninitialized value here, so make sure it's not 0 when initialized.
-                startTime = 1;
-            }
+            // We use 0 as an indicator for the uninitialized value here, so make sure it's not 0 when initialized.
+            startTime = Math.max(System.nanoTime(), 1);
 
             // Notify the other threads waiting for the initialization at start().
             startTimeInitialized.countDown();
@@ -446,15 +443,14 @@ public class HashedWheelTimer implements Timer {
                 if (deadline > 0) {
                     int idx = (int) (tick & mask);
                     processCancelledTasks();
-                    HashedWheelBucket bucket =
-                            wheel[idx];
+                    HashedWheelBucket bucket = wheel[idx];
                     transferTimeoutsToBuckets();
                     bucket.expireTimeouts(deadline);
                     tick++;
                 }
             } while (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_STARTED);
 
-            // Fill the unprocessedTimeouts so we can return them from stop() method.
+            // Fill the unprocessedTimeouts, so we can return them from stop() method.
             for (HashedWheelBucket bucket : wheel) {
                 bucket.clearTimeouts(unprocessedTimeouts);
             }
@@ -808,9 +804,9 @@ public class HashedWheelTimer implements Timer {
             return head;
         }
     }
-    
+
     private static final boolean IS_OS_WINDOWS = System.getProperty(OS_NAME_KEY, "").toLowerCase(Locale.US).contains(OS_WIN_PREFIX);
-    
+
     private boolean isWindows() {
         return IS_OS_WINDOWS;
     }
